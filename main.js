@@ -35,7 +35,7 @@ document.addEventListener('mouseup', function() {
 
     // Highlight between elements
     let next = startRoot.nextSibling;
-    while(startRoot != endRoot &&next && next != endRoot){
+    while(startRoot != endRoot && next && next != endRoot){
     	let el = next;
     	next = next.nextSibling;
     	if (el.nodeType == 3){
@@ -51,8 +51,21 @@ document.addEventListener('mouseup', function() {
     }
     // Highlight start and beginnings
     else {
-    	wrap(start, r.startOffset);
-    	wrap(end, 0, r.endOffset);	
+    	let newStart = wrap(start, r.startOffset);
+    	let el = newStart;
+    	while((el = el.nextSibling) && (el != end)){
+	    	if (el.nodeType == 3){
+	    		el = surround(el);	
+	    	}
+    		el.className = 'hl';
+    	}
+		el = wrap(end, 0, r.endOffset);	
+    	while((el = el.previousSibling) && (el != newStart)){
+	    	if (el.nodeType == 3){
+	    		el = surround(el);	
+	    	}
+    		el.className = 'hl';
+    	}
     }
 
 
@@ -85,7 +98,7 @@ function wrap(el, index, endIndex){
 		}
 	});
 
-	// return midElement;
+	return midElement;
 
 }
 
