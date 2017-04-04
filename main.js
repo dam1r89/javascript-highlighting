@@ -34,15 +34,15 @@ document.addEventListener('mouseup', function() {
     }
 
     // Highlight between elements
-    let next = startRoot.nextSibling;
-    while(startRoot != endRoot && next && next != endRoot){
-    	let el = next;
-    	next = next.nextSibling;
-    	if (el.nodeType == 3){
-    		el = surround(el);	
-    	}
-		el.className = 'hl';
-    }
+  //   let next = startRoot.nextSibling;
+  //   while(startRoot != endRoot && next && next != endRoot){
+  //   	let el = next;
+  //   	next = next.nextSibling;
+  //   	if (el.nodeType == 3){
+  //   		el = surround(el);	
+  //   	}
+		// el.className = 'hl';
+  //   }
 
 
     // Highlight middle
@@ -53,18 +53,26 @@ document.addEventListener('mouseup', function() {
     else {
     	let newStart = wrap(start, r.startOffset);
     	let el = newStart;
-    	while((el = el.nextSibling) && (el != end)){
+    	while(
+    	      (el = el.nextSibling || 
+    	       (el.parentElement && el.parentElement.nextSibling)) &&
+    	      (el != endRoot))
+    	{
 	    	if (el.nodeType == 3){
 	    		el = surround(el);	
 	    	}
     		el.className = 'hl';
     	}
 		el = wrap(end, 0, r.endOffset);	
-    	while((el = el.previousSibling) && (el != newStart)){
-	    	if (el.nodeType == 3){
-	    		el = surround(el);	
-	    	}
-    		el.className = 'hl';
+    	while(
+    	      (el = el.previousSibling || (el.praentElement && el.parentElement.previousSibling)) &&
+    	       (el != r.commonAncestorContainer) &&
+    	       (el != newStart && el != startRoot)
+    	    ) {
+		    	if (el.nodeType == 3){
+		    		el = surround(el);	
+		    	}
+	    		el.className = 'hl';
     	}
     }
 
@@ -72,6 +80,10 @@ document.addEventListener('mouseup', function() {
 });
 
 function wrap(el, index, endIndex){
+	// No need to wrap if not text node
+	if (el.nodeType != 3) {
+		return el;
+	}
 
 	let start = el.nodeValue.substr(0, index);
 	let startElement = document.createTextNode(start);
