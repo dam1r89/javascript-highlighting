@@ -7,13 +7,20 @@ rng = () => {
 
 }
 
-document.addEventListener('mouseup', function() {
+let commands = [];
+
+document.addEventListener('mouseup', function(e) {
+
+    let hasClass = e.target.className.match(/\bhl\b/)
+    if (hasClass) {
+    		
+    };
 
     let r = rng();
     if (!r) return;
 
     let start = r.startContainer,
-    	end = r.endContainer,
+        end = r.endContainer,
         startRoot = start,
         current = start;
 
@@ -33,96 +40,118 @@ document.addEventListener('mouseup', function() {
         current = current.parentElement;
     }
 
-    // Highlight between elements
-  //   let next = startRoot.nextSibling;
-  //   while(startRoot != endRoot && next && next != endRoot){
-  //   	let el = next;
-  //   	next = next.nextSibling;
-  //   	if (el.nodeType == 3){
-  //   		el = surround(el);	
-  //   	}
-		// el.className = 'hl';
-  //   }
-
 
     // Highlight middle
     if (start == end) {
-	    wrap(start, r.startOffset, r.endOffset);
+        let cmd = wrap(start, r.startOffset, r.endOffset);
+        commands.push(cmd);
+
     }
     // Highlight start and beginnings
     else {
-    	let newStart = wrap(start, r.startOffset);
-    	let el = newStart;
-    	while(
-    	      (el = el.nextSibling || 
-    	       (el.parentElement && el.parentElement.nextSibling)) &&
-    	      (el != endRoot))
-    	{
-	    	if (el.nodeType == 3){
-	    		el = surround(el);	
-	    	}
-    		el.className = 'hl';
-    	}
-		el = wrap(end, 0, r.endOffset);	
-    	while(
-    	      (el = el.previousSibling || (el.praentElement && el.parentElement.previousSibling)) &&
-    	       (el != r.commonAncestorContainer) &&
-    	       (el != newStart && el != startRoot)
-    	    ) {
-		    	if (el.nodeType == 3){
-		    		el = surround(el);	
-		    	}
-	    		el.className = 'hl';
-    	}
+
+
+        let cmd = wrap(start, r.startOffset);
+        commands.push(cmd);
+		newStart = cmd.el;
+        let el = newStart;
+        while (
+            (el = el.nextSibling ||
+                (el.parentElement && el.parentElement.nextSibling)) &&
+            (el != endRoot)
+        ) {
+            if (el.nodeType == 3) {
+                cmd = surround(el);
+                commands.push(cmd);
+                el = cmd.el;
+            }
+            el.className = 'hl';
+        }
+
+        cmd = wrap(end, 0, r.endOffset);
+        commands.push(cmd);
+        el = cmd.el;
+        while (
+            (el = el.previousSibling || (el.parentElement && el.parentElement.previousSibling)) &&
+            (el != r.commonAncestorContainer) &&
+            (el != newStart && el != startRoot)
+        ) {
+            if (el.nodeType == 3) {
+                cmd = surround(el);
+                commands.push(cmd);
+                el = cmd.el;
+            }
+            el.className = 'hl';
+        }
+        window.commands = commands
     }
+
+    sel.removeAllRanges();
 
 
 });
 
-function wrap(el, index, endIndex){
-	// No need to wrap if not text node
-	if (el.nodeType != 3) {
-		return el;
-	}
+function wrap(el, index, endIndex) {
 
-	let start = el.nodeValue.substr(0, index);
-	let startElement = document.createTextNode(start);
+    // No need to wrap if not text node
+    if (el.nodeType != 3) {
+        return {
+        	el: el,
+        	undo: () => {}
+        };
+    }
 
-	let mid = el.nodeValue.substr(index, endIndex ? endIndex - index : undefined);
-	let midElement = document.createElement('span');
-	midElement.className = 'hl';
-	midElement.appendChild( document.createTextNode(mid) );
+    let start = el.nodeValue.substr(0, index);
+    let startElement = document.createTextNode(start);
 
-	let end =  el.nodeValue.substr(endIndex)
-	let endElement = endIndex ? document.createTextNode(end) : undefined;
+    let mid = el.nodeValue.substr(index, endIndex ? endIndex - index : undefined);
+    let midElement = document.createElement('span');
+    midElement.className = 'hl';
+    midElement.appendChild(document.createTextNode(mid));
+
+    let end = el.nodeValue.substr(endIndex)
+    let endElement = endIndex ? document.createTextNode(end) : undefined;
 
 
-	// Replace split elements instead of old text
-	let newElms = [startElement, midElement, endElement].filter(x => !!x).reverse();
+    // Replace split elements instead of old text
+    let newElms = [startElement, midElement, endElement].filter(x => !!x).reverse();
 
-	let parent = el.parentElement;
-	newElms.forEach((newEl, ind) => {
-		if (ind === 0){
-			parent.replaceChild( newEl, el );
-		}
-		else {
-			parent.insertBefore(newEl, newElms[ind - 1]);
-		}
-	});
+    let parent = el.parentElement;
+    newElms.forEach((newEl, ind) => {
+        if (ind === 0) {
+            parent.replaceChild(newEl, el);
+        } else {
+            parent.insertBefore(newEl, newElms[ind - 1]);
+        }
+    });
 
-	return midElement;
+    return {
+    	el: midElement,
+    	undo: () => {
+		    newElms.forEach((newEl, ind) => {
+		        if (ind === 0) {
+		            parent.replaceChild(el, newEl);
+		        } else {
+		            parent.removeChild(newEl);
+		        }
+		    });
+    	}
+    };
 
 }
 
-function surround(element){
+function surround(element) {
 
-	console.log('surrounding', element.nodeValue);
+
     var newSpan = document.createElement('span');
-	// Append "Lorem Ipsum" text to new span:
-	newSpan.appendChild( document.createTextNode(element.nodeValue) );
+    newSpan.appendChild(document.createTextNode(element.nodeValue));
+    element.parentElement.replaceChild(newSpan, element);
+    return {
+        el: newSpan,
+        undo: () => {
+            newSpan.parentElement.replaceChild(element, newSpan);
+        }
+    }
 
-	// Replace old text node with new span:
-	element.parentElement.replaceChild( newSpan, element );
-	return newSpan;
 
 }
