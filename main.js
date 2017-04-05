@@ -67,17 +67,18 @@ document.addEventListener('mouseup', function() {
     // Highlight start and beginnings
     else {
         let newStart = split(start, r.startOffset);
-        let el = newStart;
-        while (
-            (el = el.nextSibling ||
-                (el.parentElement && el.parentElement.nextSibling)) &&
-            (el != endRoot)) {
-            el = annotateChildren(el);
-        }
+        // let el = newStart;
+        // while (
+        //     (el = el.nextSibling ||
+        //     (el.parentElement && el.parentElement.nextSibling)) &&
+        //     (el != endRoot)) {
+        //     el = annotateChildren(el);
+        // }
         el = split(end, 0, r.endOffset);
         while (
-            (el = el.previousSibling || (el.praentElement && el.parentElement.previousSibling)) &&
+            (el = el.previousSibling || (el.parentElement && el.parentElement.previousSibling)) &&
             (el != r.commonAncestorContainer) &&
+            // (el != newStart && el != startRoot)
             (el != newStart && el != startRoot)
         ) {
             el = annotateChildren(el);
@@ -121,7 +122,7 @@ document.addEventListener('mouseup', function() {
 
 
         // Replace split elements instead of old text
-        let newElms = [startElement, midElement, endElement].filter(x => !!x).reverse();
+        let newElms = [startElement, midElement, endElement].filter(x => !!(x && x.nodeValue !== '')).reverse();
 
         let parent = el.parentElement;
         newElms.forEach((newEl, ind) => {
@@ -155,7 +156,7 @@ function unwrap(element){
 		element.parentNode.replaceChild(textNode, element);
 
 		// Not supported everywhere
-		// element.parentNode.normalize();
+		textNode.parentNode.normalize();
 		// let concat = [textNode];
 
 		// let current = textNode;
