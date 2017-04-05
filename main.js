@@ -9,14 +9,12 @@ rng = () => {
 
 let counter = 0;
 
-let prevent = false;
 document.addEventListener('click', function(e) {
 	if (!e.target.className.match(/\bhl\b/)){
 		return;
 	}
-    console.log('mousedown');
-	prevent = true;
 	let key = e.target.dataset.hlKey;
+    console.log('mousedown', key);
 	elements = document.querySelectorAll('.hl-'+key);
 	for(let i =0; i < elements.length; i ++){
 		unwrap(elements[i]);
@@ -28,14 +26,6 @@ document.addEventListener('mouseup', function() {
 
     let r = rng();
     if (!r) return;
-    console.log('mouseup');
-    // if (prevent)
-    // {
-    // 	prevent = false;
-    // 	console.log('prevented');
-    // 	return;
-    // }
-
 
     let key = ++counter;
 
@@ -51,15 +41,6 @@ document.addEventListener('mouseup', function() {
         current = current.parentElement;
     }
 
-    let endRoot = end;
-
-    current = end;
-
-    while (current != r.commonAncestorContainer) {
-        endRoot = current;
-        current = current.parentElement;
-    }
-
     // Highlight middle
     if (start == end) {
         split(start, r.startOffset, r.endOffset);
@@ -67,18 +48,17 @@ document.addEventListener('mouseup', function() {
     // Highlight start and beginnings
     else {
         let newStart = split(start, r.startOffset);
-        // let el = newStart;
-        // while (
-        //     (el = el.nextSibling ||
-        //     (el.parentElement && el.parentElement.nextSibling)) &&
-        //     (el != endRoot)) {
-        //     el = annotateChildren(el);
-        // }
+        let el = newStart;
+        while (
+            (el = el.nextSibling ||
+            (el.parentElement && el.parentElement.nextSibling)) &&
+            (el.parentElement != r.commonAncestorContainer)) {
+            el = annotateChildren(el);
+        }
         el = split(end, 0, r.endOffset);
         while (
             (el = el.previousSibling || (el.parentElement && el.parentElement.previousSibling)) &&
             (el != r.commonAncestorContainer) &&
-            // (el != newStart && el != startRoot)
             (el != newStart && el != startRoot)
         ) {
             el = annotateChildren(el);
@@ -151,9 +131,30 @@ document.addEventListener('mouseup', function() {
 
 
 function unwrap(element){
+	let childNodes = element.childNodes;
+
+
+	let first = true;
+	let before;
+	while (childNodes.length > 0) {
+		if (first){
+			before = childNodes[childNodes.length - 1];
+			element.parentNode.replaceChild(before, element);
+			first = false;
+		}
+		else {
+			before.parentNode.insertBefore(childNodes[0], before);
+		}
+	}
+	if (before && before.parentNode.normalize){
+		before.parentNode.normalize();
+	}
+
+
+return;
+
 	if (element.childNodes.length == 1) {
 		let textNode = element.childNodes[0];
-		element.parentNode.replaceChild(textNode, element);
 
 		// Not supported everywhere
 		textNode.parentNode.normalize();
