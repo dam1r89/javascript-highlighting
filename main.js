@@ -33,54 +33,50 @@ document.addEventListener('mouseup', function() {
         current = current.parentElement;
     }
 
-    // Highlight between elements
-  //   let next = startRoot.nextSibling;
-  //   while(startRoot != endRoot && next && next != endRoot){
-  //   	let el = next;
-  //   	next = next.nextSibling;
-  //   	if (el.nodeType == 3){
-  //   		el = surround(el);	
-  //   	}
-		// el.className = 'hl';
-  //   }
-
-
     // Highlight middle
     if (start == end) {
-	    wrap(start, r.startOffset, r.endOffset);
+	    split(start, r.startOffset, r.endOffset);
     }
     // Highlight start and beginnings
     else {
-    	let newStart = wrap(start, r.startOffset);
+    	let newStart = split(start, r.startOffset);
     	let el = newStart;
     	while(
     	      (el = el.nextSibling || 
-    	       (el.parentElement && el.parentElement.nextSibling)) &&
+    	      (el.parentElement && el.parentElement.nextSibling)) &&
     	      (el != endRoot))
     	{
-	    	if (el.nodeType == 3){
-	    		el = surround(el);	
-	    	}
-    		el.className = 'hl';
+	    		el = annotateChildren(el);
     	}
-		el = wrap(end, 0, r.endOffset);	
+		el = split(end, 0, r.endOffset);	
     	while(
     	      (el = el.previousSibling || (el.praentElement && el.parentElement.previousSibling)) &&
-    	       (el != r.commonAncestorContainer) &&
-    	       (el != newStart && el != startRoot)
+    	      (el != r.commonAncestorContainer) &&
+    	      (el != newStart && el != startRoot)
     	    ) {
-		    	if (el.nodeType == 3){
-		    		el = surround(el);	
-		    	}
-	    		el.className = 'hl';
+	    		el = annotateChildren(el);
     	}
     }
 
+    getSelection().removeAllRanges();
 
 });
 
-function wrap(el, index, endIndex){
-	// No need to wrap if not text node
+function annotateChildren(el) {
+	if (el.nodeType == 3){
+		el = surround(el);
+		el.className = 'hl';
+		return el;
+	}
+	for (var i = 0; i < el.childNodes.length; i++) {
+		annotateChildren(el.childNodes[i]);
+	}
+	return el;
+
+}
+
+function split(el, index, endIndex){
+	// No need to split if not text node
 	if (el.nodeType != 3) {
 		return el;
 	}
@@ -116,12 +112,10 @@ function wrap(el, index, endIndex){
 
 function surround(element){
 
-	console.log('surrounding', element.nodeValue);
-    var newSpan = document.createElement('span');
-	// Append "Lorem Ipsum" text to new span:
+    let newSpan = document.createElement('span');
+
 	newSpan.appendChild( document.createTextNode(element.nodeValue) );
 
-	// Replace old text node with new span:
 	element.parentElement.replaceChild( newSpan, element );
 	return newSpan;
 
