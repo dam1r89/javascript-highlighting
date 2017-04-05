@@ -1,11 +1,22 @@
+var style = document.createElement('style');
+style.innerHTML = '.hl { background: rgba(255,255,10,0.3) }';
+document.head.appendChild(style);
+
+let storage = JSON.parse(localStorage.getItem('storage')) || {
+    highlights: {},
+    counter: 0
+};
+
+function save() {
+    localStorage.setItem('storage', JSON.stringify(storage));
+}
+
 rng = () => {
 
     sel = getSelection();
     return sel.getRangeAt(0);
 
 }
-
-let counter = 0;
 
 document.addEventListener('click', function(e) {
     if (!e.target.className.match(/\bhl\b/)) {
@@ -17,13 +28,15 @@ document.addEventListener('click', function(e) {
     for (let i = 0; i < elements.length; i++) {
         unwrap(elements[i]);
     }
+    delete storage.highlights[key];
+    save();
 
 });
 
 let xp = {
-    base: 'highlight',
-    getRange: function(obj) {
-        let root = document.getElementById(this.base);
+    base: 'body',
+    toRange: function(obj) {
+        let root = document.querySelector(this.base);
         return {
             startContainer: document.evaluate(obj.start, root, null, XPathResult.ANY_TYPE, null).iterateNext(),
             startOffset: obj.startOffset,
@@ -32,9 +45,9 @@ let xp = {
             commonAncestorContainer: document.evaluate(obj.commonAncestorContainer, root, null, XPathResult.ANY_TYPE, null).iterateNext()
         }
     },
-    storeRange: function(rng) {
+    toObject: function(rng) {
 
-        let root = document.getElementById(this.base);
+        let root = document.querySelector(this.base);
 
         return {
             start: this.getPath(rng.startContainer, root),
@@ -58,16 +71,12 @@ let xp = {
         path = '.' + path;
         return path;
     },
-    getIndex2(el) {
-        var nodes = Array.prototype.slice.call(el.parentNode.childNodes);
-        return nodes.indexOf(el) + 1;
-    },
     getIndex(el) {
         let count = 1;
         let current = el.previousSibling;
         while (current) {
             if (current.tagName == el.tagName) {
-	            count += 1;
+                count += 1;
             }
             current = current.previousSibling;
         }
@@ -78,37 +87,46 @@ let xp = {
 
 document.addEventListener('mouseup', function() {
 
-    let orig = rng();
+    let range = rng();
+    let key = ++storage.counter;
 
-    // if (r.startContainer == r.endContainer && r.startOffset == r.endOffset) return;
-
-	let store = xp.storeRange(orig)
-	console.log(store);
-	// return;
-    r = xp.getRange(store);
+    let store = xp.toObject(range)
+    console.log(store);
 
 
-    if (orig.startOffset != r.startOffset) {
-    	debugger;
+
+    storage.highlights[key] = store;
+    save();
+
+    r = xp.toRange(store);
+
+    // assertion
+    if (range.startOffset != r.startOffset) {
+        debugger;
     }
-    if (orig.endOffset != r.endOffset) {
-    	debugger;
+    if (range.endOffset != r.endOffset) {
+        debugger;
     }
-    if (orig.startContainer != r.startContainer) {
-    	debugger;
+    if (range.startContainer != r.startContainer) {
+        debugger;
     }
-    if (orig.endContainer != r.endContainer) {
-    	debugger;
-    }
-
-    if (orig.commonAncestorContainer != r.commonAncestorContainer) {
-    	debugger;
+    if (range.endContainer != r.endContainer) {
+        debugger;
     }
 
+    if (range.commonAncestorContainer != r.commonAncestorContainer) {
+        debugger;
+    }
+
+    annotate(range, key);
+
+});
 
 
+function annotate(r, key) {
 
-    let key = ++counter;
+
+    if (r.startContainer == r.endContainer && r.startOffset == r.endOffset) return;
 
     let start = r.startContainer,
         end = r.endContainer,
@@ -197,9 +215,9 @@ document.addEventListener('mouseup', function() {
         return midElement;
 
     }
+}
 
 
-});
 
 function wrap(element) {
 
@@ -231,3 +249,10 @@ function unwrap(element) {
         before.parentNode.normalize();
     }
 }
+
+
+
+
+Object.keys(storage.highlights).forEach(key => {
+    annotate(xp.toRange(storage.highlights[key]), key);
+});
