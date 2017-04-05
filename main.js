@@ -11,19 +11,13 @@ function save() {
     localStorage.setItem('storage', JSON.stringify(storage));
 }
 
-rng = () => {
 
-    sel = getSelection();
-    return sel.getRangeAt(0);
-
-}
 
 document.addEventListener('click', function(e) {
     if (!e.target.className.match(/\bhl\b/)) {
         return;
     }
     let key = e.target.dataset.hlKey;
-    console.log('mousedown', key);
     elements = document.querySelectorAll('.hl-' + key);
     for (let i = 0; i < elements.length; i++) {
         unwrap(elements[i]);
@@ -87,12 +81,17 @@ let xp = {
 
 document.addEventListener('mouseup', function() {
 
-    let range = rng();
+
+    let sel = getSelection();
+    let range = sel.getRangeAt(0);
+
     let key = ++storage.counter;
 
     let store = xp.toObject(range)
-    console.log(store);
 
+    if (range.startContainer == range.endContainer && range.startOffset == range.endOffset) return;
+
+    console.log(store);
 
 
     storage.highlights[key] = store;
@@ -119,6 +118,8 @@ document.addEventListener('mouseup', function() {
     }
 
     annotate(range, key);
+
+    getSelection().removeAllRanges();
 
 });
 
@@ -154,17 +155,23 @@ function annotate(r, key) {
             (el.parentElement != r.commonAncestorContainer)) {
             el = annotateChildren(el);
         }
+
         el = split(end, 0, r.endOffset);
-        while (
-            (el = el.previousSibling || (el.parentElement && el.parentElement.previousSibling)) &&
-            (el != r.commonAncestorContainer) &&
-            (el != newStart && el != startRoot)
-        ) {
+        while (true) {
+            if (!el.previousSibling) {
+                el = el.parentElement;
+                continue;
+            } 
+            el = el.previousSibling;
+            if (el == r.commonAncestorContainer || el == newStart || el == startRoot) {
+                break;
+            }
             el = annotateChildren(el);
         }
+
+
     }
 
-    getSelection().removeAllRanges();
 
 
     function annotateChildren(el) {
